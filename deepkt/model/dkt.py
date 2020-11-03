@@ -5,7 +5,7 @@ from torch.autograd import Variable
 
 class DKTModel(nn.Module):
     def __init__(self, n_skill, hidden_size=200,
-                 q_emb_dim=300, qa_emb_dim=300):
+                 q_emb_dim=300, qa_emb_dim=100):
         super(DKTModel, self).__init__()
         self.n_skill = n_skill
         self.hidden_size = hidden_size
@@ -13,9 +13,9 @@ class DKTModel(nn.Module):
         self.q_emb = nn.Embedding(n_skill+1, q_emb_dim)
         self.qa_emb = nn.Embedding(2, qa_emb_dim)
 
-        self.rnn = nn.LSTM(q_emb_dim+qa_emb_dim, hidden_size, batch_first=True, dropout=0.2)
+        self.rnn = nn.LSTM(q_emb_dim+qa_emb_dim, hidden_size, num_layers=2, bidirectional=True, batch_first=True, dropout=0.2)
 
-        self.lr = nn.Linear(hidden_size, hidden_size)
+        self.lr = nn.Linear(hidden_size*2, hidden_size)
         self.drop = nn.Dropout(0.4)
         self.pred = nn.Linear(hidden_size, n_skill)
         self.sigmoid = nn.Sigmoid()
@@ -23,14 +23,15 @@ class DKTModel(nn.Module):
     def forward(self, q, qa):
         bs = q.size(0)
         device = q.device
-        hidden = Variable(torch.zeros(1, bs, self.hidden_size)).to(device)
-        cell = Variable(torch.zeros(1, bs, self.hidden_size)).to(device)
+        hidden = Variable(torch.zeros(4, bs, self.hidden_size)).to(device)
+        cell = Variable(torch.zeros(4, bs, self.hidden_size)).to(device)
 
         x_q = self.q_emb(q)
         x_qa = self.qa_emb(qa)
         x = torch.cat([x_q, x_qa], dim=2)
 
-        x, _ = self.rnn(x, (hidden, cell)) # lstm output:[bs, seq_len, hidden] hidden [bs, hidden]
+        x, (h_n, c_n) = self.rnn(x, (hidden, cell)) # lstm output:[bs, seq_len, hidden] hidden [bs, hidden]
+
         x = self.drop(self.lr(x[:, -1, :]))
         x = self.pred(x)
 

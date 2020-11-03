@@ -22,17 +22,18 @@ from torch.utils.data import DataLoader
 
 from dataset import DKTDataset
 from model.dkt import DKTModel
+from utils.data import load_data
+from utils.convert import LableConvert
 
 logger = logging.Logger(__name__)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", default=128, help="data generator size")
+parser.add_argument("--batch_size", default=256, help="data generator size")
 parser.add_argument("--dataset", default="assistments", help="training dataset name")
 parser.add_argument("--epochs", default=20, help="training epoch numbers")
 parser.add_argument("--model", default="dkt", help="train model")
 parser.add_argument("--max_seq", default=200, help="max question answer sequence length")
-parser.add_argument("--n_skill", default=124, help="training dataset size")
-parser.add_argument("--root", default="../data", help="dataset file path")
+parser.add_argument("--root", default="../../../input", help="dataset file path")
 args = parser.parse_args()
 
 
@@ -55,7 +56,7 @@ def train(model, train_iterator, optim, criterion, device="cpu"):
         optim.zero_grad()
         output = model(q, qa)
 
-        output = torch.gather(output, -1, target_id-1)
+        output = torch.gather(output, -1, target_id)
         pred = (output >= 0.5).long()
         
         loss = criterion(output, label)
@@ -97,8 +98,8 @@ def validation(model, val_iterator, criterion, device):
 
         with torch.no_grad():
             output = model(q, qa)
-    
-        output = torch.gather(output, -1, target_id-1)
+
+        output = torch.gather(output, -1, target_id)
         pred = (output >= 0.5).long()
         loss = criterion(output, label)
 
@@ -121,16 +122,23 @@ def validation(model, val_iterator, criterion, device):
 if __name__ == "__main__":
     path = os.path.join(args.root, args.dataset)
 
-    train_dataset = DKTDataset(path+"/train.csv", max_seq=200)
-    val_dataset = DKTDataset(path+"/val.csv", max_seq=200)
+    skills, users = load_data(path)
+    convert = LableConvert(skills)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    n_skill = len(skills)
+    print("training data skill length ", n_skill)
+
+    train_dataset = DKTDataset(path+"/train.csv", convert=convert, max_seq=500)
+    val_dataset = DKTDataset(path+"/val.csv", convert=convert, max_seq=500)
+    print("train dataset length {}, val dataset length {}".format(len(train_dataset), len(val_dataset)))
+
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = DKTModel(args.n_skill)
+    model = DKTModel(n_skill)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.99, weight_decay=0.005)
     optimizer = torch.optim.Adam(model.parameters())
     criterion = nn.BCEWithLogitsLoss()

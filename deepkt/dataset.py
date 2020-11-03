@@ -7,9 +7,10 @@ from torch.utils.data import Dataset
 
 
 class DKTDataset(Dataset):
-    def __init__(self, fn, max_seq=100):
+    def __init__(self, fn, convert=None, max_seq=100):
         super(DKTDataset, self).__init__()
         self.max_seq = max_seq
+        self.convert = convert
 
         self.user_ids = []
         self.samples = []
@@ -30,7 +31,10 @@ class DKTDataset(Dataset):
     def __getitem__(self, index):
         user_id = self.user_ids[index]
         q_, qa_ = self.samples[index]
-        # q_ = np.array([int(skill_id2ix[x]) for x in q_])
+
+        if self.convert:
+            q_ = self.convert.encoder(q_)
+
         seq_len = len(q_)
 
         q = np.zeros(self.max_seq, dtype=int)
