@@ -128,8 +128,8 @@ if __name__ == "__main__":
     n_skill = len(skills)
     print("training data skill length ", n_skill)
 
-    train_dataset = DKTDataset(path+"/train.csv", convert=convert, max_seq=500)
-    val_dataset = DKTDataset(path+"/val.csv", convert=convert, max_seq=500)
+    train_dataset = DKTDataset(path+"/train.csv", convert=convert, max_seq=200)
+    val_dataset = DKTDataset(path+"/val.csv", convert=convert, max_seq=200)
     print("train dataset length {}, val dataset length {}".format(len(train_dataset), len(val_dataset)))
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
