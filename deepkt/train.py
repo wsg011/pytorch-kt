@@ -31,6 +31,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", default=256, help="data generator size")
 parser.add_argument("--dataset", default="assistments", help="training dataset name")
 parser.add_argument("--epochs", default=20, help="training epoch numbers")
+parser.add_argument("--lr", default=0.001, help="learning rate")
 parser.add_argument("--model", default="dkt", help="train model")
 parser.add_argument("--max_seq", default=200, help="max question answer sequence length")
 parser.add_argument("--root", default="../../../input", help="dataset file path")
@@ -128,8 +129,8 @@ if __name__ == "__main__":
     n_skill = len(skills)
     print("training data skill length ", n_skill)
 
-    train_dataset = DKTDataset(path+"/train.csv", convert=convert, max_seq=200)
-    val_dataset = DKTDataset(path+"/val.csv", convert=convert, max_seq=200)
+    train_dataset = DKTDataset(path+"/train.csv", convert=convert, max_seq=args.max_seq)
+    val_dataset = DKTDataset(path+"/val.csv", convert=convert, max_seq=args.max_seq)
     print("train dataset length {}, val dataset length {}".format(len(train_dataset), len(val_dataset)))
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
@@ -140,7 +141,7 @@ if __name__ == "__main__":
 
     model = DKTModel(n_skill)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.99, weight_decay=0.005)
-    optimizer = torch.optim.Adam(model.parameters())
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.BCEWithLogitsLoss()
 
     model.to(device)
