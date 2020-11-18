@@ -26,9 +26,10 @@ from model.dkt import DKTModel
 logger = logging.Logger(__name__)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", default=128, help="data generator size")
+parser.add_argument("--batch_size", default=256, help="data generator size")
 parser.add_argument("--dataset", default="assistments", help="training dataset name")
 parser.add_argument("--epochs", default=20, help="training epoch numbers")
+parser.add_argument("--lr", default=0.001, help="learning rate")
 parser.add_argument("--model", default="dkt", help="train model")
 parser.add_argument("--max_seq", default=100, help="max question answer sequence length")
 parser.add_argument("--n_skill", default=124, help="training dataset size")
@@ -54,8 +55,8 @@ def train(model, train_iterator, optim, criterion, device="cpu"):
         optim.zero_grad()
         output = model(x)
 
-        output = torch.gather(output, -1, target_id-1)
-        pred = (output >= 0.5).long()
+        output = torch.gather(output, -1, target_id)
+        pred = (torch.sigmoid(output) >= 0.5).long()
         
         loss = criterion(output, label)
         loss.backward()
@@ -96,8 +97,9 @@ def validation(model, val_iterator, criterion, device):
         with torch.no_grad():
             output = model(x)
     
-        output = torch.gather(output, -1, target_id-1)
-        pred = (output >= 0.5).long()
+        output = torch.gather(output, -1, target_id)
+
+        pred = (torch.sigmoid(output) >= 0.5).long()
         loss = criterion(output, label)
 
         val_loss.append(loss.item())
@@ -119,19 +121,19 @@ def validation(model, val_iterator, criterion, device):
 if __name__ == "__main__":
     path = os.path.join(args.root, args.dataset)
 
-    train_dataset = DKTDataset(path+"/train.csv", max_seq=200, n_skill=args.n_skill)
-    val_dataset = DKTDataset(path+"/val.csv", max_seq=200, n_skill=args.n_skill)
+    train_dataset = DKTDataset(path+"/train.csv", max_seq=100, n_skill=args.n_skill)
+    val_dataset = DKTDataset(path+"/val.csv", max_seq=100, n_skill=args.n_skill)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model = DKTModel(args.n_skill)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.99, weight_decay=0.005)
     optimizer = torch.optim.Adam(model.parameters())
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     model.to(device)
     criterion.to(device)

@@ -31,7 +31,6 @@ class DKTDataset(Dataset):
     def __getitem__(self, index):
         user_id = self.user_ids[index]
         q_, qa_ = self.samples[index]
-        # q_ = np.array([int(skill_id2ix[x]) for x in q_])
         seq_len = len(q_)
 
         q = np.zeros(self.max_seq, dtype=int)
@@ -45,7 +44,6 @@ class DKTDataset(Dataset):
 
         target_id = q[-1]
         label = qa[-1]
-        print(q)
 
         q = q[:-1].astype(np.int)
         qa = qa[:-1].astype(np.int)

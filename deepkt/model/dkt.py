@@ -5,6 +5,7 @@ from torch.autograd import Variable
 
 class DKTModel(nn.Module):
     def __init__(self, n_skill, hidden_size=200, emb_dim=300):
+
         super(DKTModel, self).__init__()
         self.n_skill = n_skill
         self.hidden_size = hidden_size
@@ -14,10 +15,7 @@ class DKTModel(nn.Module):
 
         self.lstm = nn.LSTM(emb_dim, hidden_size, batch_first=True, dropout=0.2)
 
-        self.lr = nn.Linear(hidden_size, hidden_size)
-        self.drop = nn.Dropout(0.4)
         self.pred = nn.Linear(hidden_size, n_skill)
-        self.sigmoid = nn.Sigmoid()
     
     def forward(self, x):
         bs = x.size(0)
@@ -28,10 +26,9 @@ class DKTModel(nn.Module):
         x = self.embedding(x)
 
         x, _ = self.lstm(x, (hidden, cell)) # lstm output:[bs, seq_len, hidden] hidden [bs, hidden]
-        x = self.drop(self.lr(x[:, -1, :]))
-        x = self.pred(x)
+        x = self.pred(x[:, -1, :])
 
-        return self.sigmoid(x)
+        return x
     
 
 if __name__ == "__main__":

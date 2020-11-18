@@ -2,7 +2,7 @@
 
 | Dataset         | Model | auc  |
 | --------------- | ----- | ---- |
-| ASSISTments2009 | DeepKT   | 0.85 |
+| ASSISTments2009 | DeepKT   | 0.78 |
 |                 |       |      |
 |                 |       |      |
 

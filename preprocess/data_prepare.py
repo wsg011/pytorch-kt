@@ -47,7 +47,7 @@ def save_file(data, file_name):
 if __name__ == "__main__":
     path = os.path.join(args.root, args.dataset, args.input)
 
-    if args.dataset == "ASSISTments2009":
+    if args.dataset in ["assistments2009", "assistments2012", "assistments2015"]:
         df = pd.read_csv(path)
         
         data = pd.DataFrame()
@@ -55,20 +55,42 @@ if __name__ == "__main__":
         data["skill_id"] = df["skill_id"]
         data["correct"] = df["correct"]
         data = data.dropna()
+
+    elif args.dataset == "riid":
+        dtype = {'timestamp': 'int64', 'user_id': 'int32' ,
+             'content_id': 'int16','content_type_id': 'int8',
+             'answered_correctly':'int8'}
+
+        train_df = pd.read_csv(path, usecols=[1, 2, 3,4,7], dtype=dtype)
+        train_df = train_df[train_df.content_type_id == False]
+        train_df = train_df.sort_values(['timestamp'], ascending=True).reset_index(drop = True)
+
+        data = pd.DataFrame()
+        data["user_id"] = train_df["user_id"]
+        data["skill_id"] = train_df["content_id"]
+        data["correct"] = train_df["answered_correctly"]
+    
+    elif args.dataset == "xkl":
+        df = pd.read_csv(path)
+
+        data = df
+
     else:
         raise KeyError("can't get dataset name")
 
     user_ids = data["user_id"].unique()
+
     skill_ids = data["skill_id"].unique()
+    skill_ids = [int(x) for x in skill_ids]
+    skill_ids = sorted(skill_ids)
 
     group = data.groupby('user_id').apply(lambda r: (
             r['skill_id'].values,
             r['correct'].values))
     
-    train, val = train_test_split(group, test_size=0.2)
+    train, val = train_test_split(group, test_size=0.3)
 
     # save skill_id
-    skill_ids = [int(x) for x in skill_ids]
     skill_df = pd.DataFrame(skill_ids, columns=["skill_id"])
     skill_df.to_csv(os.path.join(args.root, args.dataset, "skills.csv"), index=False)
 
