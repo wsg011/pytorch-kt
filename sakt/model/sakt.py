@@ -20,7 +20,7 @@ class FFN(nn.Module):
 
 
 class SAKTModel(nn.Module):
-    def __init__(self, n_skill, max_seq=200, embed_dim=200):
+    def __init__(self, n_skill, max_seq=100, embed_dim=100):
         super(SAKTModel, self).__init__()
         self.n_skill = n_skill
         self.embed_dim = embed_dim
@@ -29,7 +29,7 @@ class SAKTModel(nn.Module):
         self.pos_embedding = nn.Embedding(max_seq-1, embed_dim)
         self.e_embedding = nn.Embedding(n_skill+1, embed_dim)
 
-        self.multi_att = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=8, dropout=0.2)
+        self.multi_att = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=5, dropout=0.2)
 
         self.dropout = nn.Dropout(0.2)
         self.layer_normal = nn.LayerNorm(embed_dim) 
@@ -44,22 +44,18 @@ class SAKTModel(nn.Module):
 
         pos_x = self.pos_embedding(pos_id)
         x = x + pos_x
-        # x = self.layer_normal(x)
-        res = x
 
-        e = self.e_embedding(e)
+        e = self.e_embedding(question_ids)
 
         x = x.permute(1, 0, 2) # x: [bs, s_len, embed] => [s_len, bs, embed]
         e = e.permute(1, 0, 2)
         att_output, att_weight = self.multi_att(e, x, x)
         att_output = att_output.permute(1, 0, 2) # att_output: [s_len, bs, embed] => [bs, s_len, embed]
+        att_output = self.layer_normal(att_output)
         # print(att_output.shape, att_weight.shape)
-
-        x = self.layer_normal(att_output)
         x = self.ffn(att_output)
-        x = x + res
-        x = self.layer_normal(x)
-        x = self.dropout(x)
+        # x = self.dropout(x)
+        x = x + att_output
         x = self.pred(x)
 
         return x, att_weight

@@ -26,9 +26,9 @@ from model.sakt import SAKTModel
 logger = logging.Logger(__name__)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", default=64, help="data generator size")
+parser.add_argument("--batch_size", default=128, help="data generator size")
 parser.add_argument("--dataset", default="assistments", help="training dataset name")
-parser.add_argument("--epochs", default=20, help="training epoch numbers")
+parser.add_argument("--epochs", default=10, help="training epoch numbers")
 parser.add_argument("--lr", default=0.001, help="learning rate")
 parser.add_argument("--model", default="dkt", help="train model")
 parser.add_argument("--max_seq", default=100, help="max question answer sequence length")
@@ -137,9 +137,9 @@ if __name__ == "__main__":
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = SAKTModel(args.n_skill)
+    model = SAKTModel(args.n_skill, embed_dim=100)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.99, weight_decay=0.005)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
     criterion = nn.BCEWithLogitsLoss()
 
     model.to(device)
@@ -148,10 +148,10 @@ if __name__ == "__main__":
     epochs = args.epochs
     for epoch in range(epochs):
         loss, acc, auc = train(model, train_dataloader, optimizer, criterion, device)
-        print("epoch - {} train_loss - {:.2f} acc - {:.2f} auc - {:.2f}".format(epoch, loss, acc, auc))
+        print("epoch - {} train_loss - {:.2f} acc - {:.3f} auc - {:.3f}".format(epoch, loss, acc, auc))
 
         val_loss, val_acc, val_auc = validation(model, val_dataloader, criterion, device)
-        print("epoch - {} vall_loss - {:.2f} acc - {:.2f} auc - {:.2f}".format(epoch, val_loss, val_acc, val_auc))
+        print("epoch - {} vall_loss - {:.2f} acc - {:.3f} auc - {:.3f}".format(epoch, val_loss, val_acc, val_auc))
 
 
 

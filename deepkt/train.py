@@ -141,10 +141,10 @@ if __name__ == "__main__":
     epochs = args.epochs
     for epoch in range(epochs):
         loss, acc, auc = train(model, train_dataloader, optimizer, criterion, device)
-        print("epoch - {} train_loss - {:.2f} acc - {:.2f} auc - {:.2f}".format(epoch, loss, acc, auc))
+        print("epoch - {} train_loss - {:.2f} acc - {:.3f} auc - {:.3f}".format(epoch, loss, acc, auc))
 
         val_loss, val_acc, val_auc = validation(model, val_dataloader, criterion, device)
-        print("epoch - {} vall_loss - {:.2f} acc - {:.2f} auc - {:.2f}".format(epoch, val_loss, val_acc, val_auc))
+        print("epoch - {} vall_loss - {:.2f} acc - {:.3f} auc - {:.3f}".format(epoch, val_loss, val_acc, val_auc))
 
 
 
