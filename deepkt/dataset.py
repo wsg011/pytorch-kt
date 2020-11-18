@@ -7,8 +7,9 @@ from torch.utils.data import Dataset
 
 
 class DKTDataset(Dataset):
-    def __init__(self, fn, max_seq=100):
+    def __init__(self, fn, n_skill, max_seq=100):
         super(DKTDataset, self).__init__()
+        self.n_skill = n_skill
         self.max_seq = max_seq
 
         self.user_ids = []
@@ -44,19 +45,22 @@ class DKTDataset(Dataset):
 
         target_id = q[-1]
         label = qa[-1]
+        print(q)
 
         q = q[:-1].astype(np.int)
         qa = qa[:-1].astype(np.int)
+        x = q[:-1]
+        x += (qa[:-1] == 1) * self.n_skill
+
         target_id = np.array([target_id]).astype(np.int)
         label = np.array([label]).astype(np.int)
 
-        return q, qa, target_id, label 
+        return x, target_id, label 
 
 
 if __name__ == "__main__":
-    dataset = DKTDataset("../data/ASSISTments2009/train.csv", "")
+    dataset = DKTDataset("../data/ASSISTments2009/train.csv", n_skill=124)
 
-    q, qa, target_id, label = dataset.__getitem__(10)
-    print(q)
-    print(qa)
-    print(q.shape, qa.shape, target_id, label)
+    x, target_id, label = dataset.__getitem__(10)
+    print(x)
+    print(target_id, label)
