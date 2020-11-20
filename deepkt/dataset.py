@@ -21,6 +21,8 @@ class DKTDataset(Dataset):
                 qa = [int(x) for x in qa.strip().split(",") if x]
 
                 assert len(q) == len(qa)
+                if len(q) <= 2:
+                    continue
 
                 self.user_ids.append(student_id)
                 self.samples.append((q, qa))

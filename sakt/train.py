@@ -26,13 +26,13 @@ from model.sakt import SAKTModel
 logger = logging.Logger(__name__)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", default=128, help="data generator size")
+parser.add_argument("--batch_size", default=256, help="data generator size")
 parser.add_argument("--dataset", default="assistments", help="training dataset name")
-parser.add_argument("--epochs", default=10, help="training epoch numbers")
+parser.add_argument("--epochs", default=50, help="training epoch numbers")
 parser.add_argument("--lr", default=0.001, help="learning rate")
 parser.add_argument("--model", default="dkt", help="train model")
 parser.add_argument("--max_seq", default=100, help="max question answer sequence length")
-parser.add_argument("--n_skill", default=124, help="training dataset size")
+parser.add_argument("--n_skill", default=124, type=int, help="training dataset size")
 parser.add_argument("--root", default="../data", help="dataset file path")
 args = parser.parse_args()
 
@@ -49,23 +49,20 @@ def train(model, train_iterator, optim, criterion, device="cpu"):
     tbar = tqdm(train_iterator)
     for item in tbar:
         x = item[0].to(device).long()
-        q = item[1].to(device).long()
-        target_id = item[2].to(device).long()
-        label = item[3].to(device).float()
+        questions = item[1].to(device).long()
+        label = item[2].to(device).float()
 
         optim.zero_grad()
-        output, att_weight = model(x, q, target_id)
-        # print(output.shape, att_weight.shape)
-
-        output = torch.gather(output, -1, target_id.unsqueeze(-1))
-        output = output.squeeze(-1)
-        pred = (torch.sigmoid(output) >= 0.5).long()
-        
+        output, att_weight = model(x, questions) 
         loss = criterion(output, label)
         loss.backward()
         optim.step()
-
         train_loss.append(loss.item())
+        
+        output = output[:, -1]
+        label = label[:, -1]  
+        pred = (torch.sigmoid(output) >= 0.5).long()
+
         num_corrects += (pred == label).sum().item()
         num_total += len(label)
 
@@ -95,21 +92,17 @@ def validation(model, val_iterator, criterion, device):
     tbar = tqdm(val_iterator)
     for item in tbar:
         x = item[0].to(device).long()
-        q = item[1].to(device).long()
-        target_id = item[2].to(device).long()
-        label = item[3].to(device).float()
+        questions = item[1].to(device).long()
+        label = item[2].to(device).float()
 
         with torch.no_grad():
-            output, att_weight = model(x, q, target_id)
-
-    
-        output = torch.gather(output, -1, target_id.unsqueeze(-1))
-        output = output.squeeze(-1)
-        pred = (torch.sigmoid(output) >= 0.5).long()
-        
+            output, att_weight = model(x, questions)
         loss = criterion(output, label)
-
         val_loss.append(loss.item())
+
+        output = output[:, -1]
+        label = label[:, -1]   
+        pred = (torch.sigmoid(output) >= 0.5).long()
         num_corrects += (pred == label).sum().item()
         num_total += len(label)
 
@@ -128,8 +121,15 @@ def validation(model, val_iterator, criterion, device):
 if __name__ == "__main__":
     path = os.path.join(args.root, args.dataset)
 
-    train_dataset = SAKTDataset(path+"/train.csv", max_seq=100, n_skill=args.n_skill, split="test")
-    val_dataset = SAKTDataset(path+"/val.csv", max_seq=100, n_skill=args.n_skill, split="test")
+    if args.dataset == "riid":
+        n_skill = 13523
+    elif args.dataset == "assistments":
+        n_skill = 124
+    else:
+        raise KeyError("dataset not find.")
+
+    train_dataset = SAKTDataset(path+"/train.csv", max_seq=100, n_skill=n_skill)
+    val_dataset = SAKTDataset(path+"/val.csv", max_seq=100, n_skill=n_skill)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = SAKTModel(args.n_skill, embed_dim=100)
+    model = SAKTModel(n_skill, embed_dim=100)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.99, weight_decay=0.005)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
     criterion = nn.BCEWithLogitsLoss()
@@ -148,10 +148,10 @@ if __name__ == "__main__":
     epochs = args.epochs
     for epoch in range(epochs):
         loss, acc, auc = train(model, train_dataloader, optimizer, criterion, device)
-        print("epoch - {} train_loss - {:.2f} acc - {:.3f} auc - {:.3f}".format(epoch, loss, acc, auc))
+        print("epoch - {} train_loss - {:.2f} acc - {:.3f} auc - {:.4f}".format(epoch, loss, acc, auc))
 
         val_loss, val_acc, val_auc = validation(model, val_dataloader, criterion, device)
-        print("epoch - {} vall_loss - {:.2f} acc - {:.3f} auc - {:.3f}".format(epoch, val_loss, val_acc, val_auc))
+        print("epoch - {} vall_loss - {:.2f} acc - {:.3f} auc - {:.4f}".format(epoch, val_loss, val_acc, val_auc))
 
 
 

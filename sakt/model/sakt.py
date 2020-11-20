@@ -1,5 +1,16 @@
+import numpy as np
+
 import torch
 import torch.nn as nn
+
+# def future_mask(seq_length, que_length):
+#     mask = np.ones((seq_length, seq_length))
+#     future_mask = np.triu(np.ones((seq_length, seq_length)), k=1).astype('bool')
+#     return torch.from_numpy(future_mask)
+
+def future_mask(seq_length):
+    future_mask = np.triu(np.ones((seq_length, seq_length)), k=1).astype('bool')
+    return torch.from_numpy(future_mask)
 
 
 class FFN(nn.Module):
@@ -20,7 +31,7 @@ class FFN(nn.Module):
 
 
 class SAKTModel(nn.Module):
-    def __init__(self, n_skill, max_seq=100, embed_dim=100):
+    def __init__(self, n_skill, max_seq=100, embed_dim=200):
         super(SAKTModel, self).__init__()
         self.n_skill = n_skill
         self.embed_dim = embed_dim
@@ -35,10 +46,10 @@ class SAKTModel(nn.Module):
         self.layer_normal = nn.LayerNorm(embed_dim) 
 
         self.ffn = FFN(embed_dim)
-        self.pred = nn.Linear(embed_dim, n_skill)
+        self.pred = nn.Linear(embed_dim, 1)
     
-    def forward(self, x, question_ids, e):
-        device = x.device
+    def forward(self, x, question_ids):
+        device = x.device        
         x = self.embedding(x)
         pos_id = torch.arange(x.size(1)).unsqueeze(0).to(device)
 
@@ -49,31 +60,35 @@ class SAKTModel(nn.Module):
 
         x = x.permute(1, 0, 2) # x: [bs, s_len, embed] => [s_len, bs, embed]
         e = e.permute(1, 0, 2)
-        att_output, att_weight = self.multi_att(e, x, x)
+        att_mask = future_mask(x.size(0)).to(device)
+        att_output, att_weight = self.multi_att(e, x, x, attn_mask=att_mask)
+        att_output = self.layer_normal(att_output + x)
         att_output = att_output.permute(1, 0, 2) # att_output: [s_len, bs, embed] => [bs, s_len, embed]
-        att_output = self.layer_normal(att_output)
         # print(att_output.shape, att_weight.shape)
         x = self.ffn(att_output)
         # x = self.dropout(x)
-        x = x + att_output
+        x = self.layer_normal(x + att_output)
         x = self.pred(x)
 
-        return x, att_weight
+        return x.squeeze(-1), att_weight
 
 
 if __name__ == "__main__":
-    q = torch.randint(0, 100, size=(1, 6))
-    qa = torch.randint(0, 2, size=(1, 6))
-    print(q, qa)
+    q = torch.zeros((2, 9)).long()
+    qa = torch.zeros((2, 9)).long()
+
+    q_ = torch.randint(0, 100, size=(2, 6))
+    qa_ = torch.randint(0, 2, size=(2, 6))
+
+    q[:, -6:] = q_
+    qa[:, -6:] = qa_
 
     x = q[:, :-1].clone()
-    print(x)
     x += (qa[:, :-1] == 1) * 100
-    print(x)
-    e = q[:, 1:].clone()
-    question_ids = q[:, :-1].clone()
+    e = q[:, -1].clone()
+    question_ids = q[:, 1:].clone()
 
     model = SAKTModel(n_skill=100)
-    ouput, att_weight = model(x, question_ids, e)
+    ouput, att_weight = model(x, question_ids)
     print(ouput.shape)
-    print(att_weight.shape)
+    print(att_weight)

@@ -26,13 +26,12 @@ from model.dkt import DKTModel
 logger = logging.Logger(__name__)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", default=256, help="data generator size")
+parser.add_argument("--batch_size", default=1024, help="data generator size")
 parser.add_argument("--dataset", default="assistments", help="training dataset name")
 parser.add_argument("--epochs", default=20, help="training epoch numbers")
 parser.add_argument("--lr", default=0.001, help="learning rate")
 parser.add_argument("--model", default="dkt", help="train model")
 parser.add_argument("--max_seq", default=100, help="max question answer sequence length")
-parser.add_argument("--n_skill", default=124, help="training dataset size")
 parser.add_argument("--root", default="../data", help="dataset file path")
 args = parser.parse_args()
 
@@ -121,16 +120,23 @@ def validation(model, val_iterator, criterion, device):
 if __name__ == "__main__":
     path = os.path.join(args.root, args.dataset)
 
-    train_dataset = DKTDataset(path+"/train.csv", max_seq=100, n_skill=args.n_skill)
-    val_dataset = DKTDataset(path+"/val.csv", max_seq=100, n_skill=args.n_skill)
+    if args.dataset == "riid":
+        n_skill = 13523
+    elif args.dataset == "assistments":
+        n_skill = 124
+    else:
+        raise KeyError("dataset error")
+
+    train_dataset = DKTDataset(path+"/train.csv", max_seq=100, n_skill=n_skill)
+    val_dataset = DKTDataset(path+"/val.csv", max_seq=100, n_skill=n_skill)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
     val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = DKTModel(args.n_skill)
+    model = DKTModel(n_skill)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.99, weight_decay=0.005)
     optimizer = torch.optim.Adam(model.parameters())
     criterion = nn.BCEWithLogitsLoss()

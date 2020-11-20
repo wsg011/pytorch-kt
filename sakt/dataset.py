@@ -7,11 +7,10 @@ from torch.utils.data import Dataset
 
 
 class SAKTDataset(Dataset):
-    def __init__(self, fn, n_skill, max_seq=100, split="train"):
+    def __init__(self, fn, n_skill, max_seq=100):
         super(SAKTDataset, self).__init__()
         self.n_skill = n_skill
         self.max_seq = max_seq
-        self.split = split
 
         self.user_ids = []
         self.samples = []
@@ -22,6 +21,9 @@ class SAKTDataset(Dataset):
                 qa = [int(x) for x in qa.strip().split(",") if x]
 
                 assert len(q) == len(qa)
+
+                # if len(q) <= 2:
+                #     continue
 
                 self.user_ids.append(student_id)
                 self.samples.append((q, qa))
@@ -55,24 +57,14 @@ class SAKTDataset(Dataset):
 
         # target_id = np.array([q[-1]])
         # label = np.array([qa[-1]])
-        if self.split == "train":
-            target_id = q[1:]
-            label = qa[1:]
-        else:
-            target_id = np.array([q[-1]])
-            label = np.array([qa[-1]])
+        questions = q[1:].copy()
+        correctness = qa[1:]
     
         x = q[:-1].copy()
         x += (qa[:-1] == 1) * self.n_skill
 
-        q = q[:-1]
-
-        assert x.shape == q.shape
-        assert target_id.shape == label.shape
-
-        return x, q, target_id, label 
-
-
+        return x, questions, correctness
+        
 if __name__ == "__main__":
     dataset = SAKTDataset("../data/ASSISTments2009/train.csv", n_skill=124)
 

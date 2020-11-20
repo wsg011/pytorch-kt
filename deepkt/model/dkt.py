@@ -4,7 +4,7 @@ from torch.autograd import Variable
 
 
 class DKTModel(nn.Module):
-    def __init__(self, n_skill, hidden_size=200, emb_dim=300):
+    def __init__(self, n_skill, hidden_size=100, emb_dim=100):
 
         super(DKTModel, self).__init__()
         self.n_skill = n_skill

@@ -1,8 +1,7 @@
 # Deep Knowledge Tracing
 
-| Dataset         | Model | auc  |
-| --------------- | ----- | ---- |
-| ASSISTments2009 | DeepKT   | 0.78 |
-|                 |       |      |
-|                 |       |      |
+|         | ASSISTments2009 | riid   |
+| ------- | --------------- | ------ |
+| DeepKT  | 0.76            | 0.693  |
+| sakt    | 0.77            | 0.746  |
 
