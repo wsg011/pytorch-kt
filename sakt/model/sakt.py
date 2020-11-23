@@ -3,10 +3,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-# def future_mask(seq_length, que_length):
-#     mask = np.ones((seq_length, seq_length))
-#     future_mask = np.triu(np.ones((seq_length, seq_length)), k=1).astype('bool')
-#     return torch.from_numpy(future_mask)
 
 def future_mask(seq_length):
     future_mask = np.triu(np.ones((seq_length, seq_length)), k=1).astype('bool')
@@ -59,6 +55,10 @@ class SAKTModel(nn.Module):
 
     def forward(self, x, question_ids):
         device = x.device        
+        # src_pad_mask = (x == 0)
+        # tgt_pad_mask = (question_ids == 0)
+        # mask = src_pad_mask & tgt_pad_mask
+
         x = self.embedding(x)
         pos_id = torch.arange(x.size(1)).unsqueeze(0).to(device)
 
@@ -71,7 +71,7 @@ class SAKTModel(nn.Module):
         e = e.permute(1, 0, 2)
         att_mask = future_mask(x.size(0)).to(device)
         att_output, att_weight = self.multi_att(e, x, x, attn_mask=att_mask)
-        att_output = self.layer_normal(att_output + x)
+        att_output = self.layer_normal(att_output + e)
         att_output = att_output.permute(1, 0, 2) # att_output: [s_len, bs, embed] => [bs, s_len, embed]
         # print(att_output.shape, att_weight.shape)
         x = self.ffn(att_output)
@@ -98,6 +98,7 @@ if __name__ == "__main__":
     question_ids = q[:, 1:].clone()
 
     model = SAKTModel(n_skill=100)
+    print(x.shape, question_ids.shape)
     ouput, att_weight = model(x, question_ids)
     print(ouput.shape)
     print(att_weight)

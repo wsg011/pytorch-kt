@@ -22,8 +22,8 @@ class SAKTDataset(Dataset):
 
                 assert len(q) == len(qa)
 
-                # if len(q) <= 2:
-                #     continue
+                if len(q) <= 2:
+                    continue
 
                 self.user_ids.append(student_id)
                 self.samples.append((q, qa))

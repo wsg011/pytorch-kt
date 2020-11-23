@@ -26,7 +26,7 @@ from model.sakt import SAKTModel
 logger = logging.Logger(__name__)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", default=64, help="data generator size")
+parser.add_argument("--batch_size", default=64, type=int, help="data generator size")
 parser.add_argument("--dataset", default="assistments", help="training dataset name")
 parser.add_argument("--epochs", default=50, help="training epoch numbers")
 parser.add_argument("--lr", default=0.001, help="learning rate")
@@ -61,14 +61,13 @@ def train(model, train_iterator, optim, criterion, device="cpu"):
         
         output = output[:, -1]
         label = label[:, -1]  
-        pred = (torch.sigmoid(output) >= 0.5).long()
+        pred = (output >= 0.5).long()
 
         num_corrects += (pred == label).sum().item()
         num_total += len(label)
 
-
-        labels.extend(label.squeeze(-1).data.cpu().numpy())
-        outs.extend(output.squeeze(-1).data.cpu().numpy())
+        labels.extend(label.view(-1).data.cpu().numpy())
+        outs.extend(output.view(-1).data.cpu().numpy())
 
         tbar.set_description('loss - {:.4f}'.format(loss))
 
@@ -102,12 +101,12 @@ def validation(model, val_iterator, criterion, device):
 
         output = output[:, -1]
         label = label[:, -1]   
-        pred = (torch.sigmoid(output) >= 0.5).long()
+        pred = (output >= 0.5).long()
         num_corrects += (pred == label).sum().item()
         num_total += len(label)
 
-        labels.extend(label.squeeze(-1).data.cpu().numpy())
-        outs.extend(output.squeeze(-1).data.cpu().numpy())
+        labels.extend(label.view(-1).data.cpu().numpy())
+        outs.extend(output.view(-1).data.cpu().numpy())
 
         tbar.set_description('loss - {:.4f}'.format(loss))
 
@@ -136,10 +135,10 @@ if __name__ == "__main__":
     val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    
+
     model = SAKTModel(n_skill, embed_dim=128)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.99, weight_decay=0.005)
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
+    optimizer = torch.optim.Adam(model.parameters())
     criterion = nn.BCELoss()
 
     model.to(device)
