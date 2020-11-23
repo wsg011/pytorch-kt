@@ -40,14 +40,23 @@ class SAKTModel(nn.Module):
         self.pos_embedding = nn.Embedding(max_seq-1, embed_dim)
         self.e_embedding = nn.Embedding(n_skill+1, embed_dim)
 
-        self.multi_att = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=5, dropout=0.2)
+        self.multi_att = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=8, dropout=0.2)
 
         self.dropout = nn.Dropout(0.2)
         self.layer_normal = nn.LayerNorm(embed_dim) 
 
         self.ffn = FFN(embed_dim)
         self.pred = nn.Linear(embed_dim, 1)
+        self.sigmoid = nn.Sigmoid()
+
+        self._reset_parameters()
     
+    def _reset_parameters(self):
+        r"""Initiate parameters in the model."""
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
     def forward(self, x, question_ids):
         device = x.device        
         x = self.embedding(x)
@@ -70,7 +79,7 @@ class SAKTModel(nn.Module):
         x = self.layer_normal(x + att_output)
         x = self.pred(x)
 
-        return x.squeeze(-1), att_weight
+        return self.sigmoid(x.squeeze(-1)), att_weight
 
 
 if __name__ == "__main__":

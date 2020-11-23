@@ -26,7 +26,7 @@ from model.sakt import SAKTModel
 logger = logging.Logger(__name__)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", default=256, help="data generator size")
+parser.add_argument("--batch_size", default=64, help="data generator size")
 parser.add_argument("--dataset", default="assistments", help="training dataset name")
 parser.add_argument("--epochs", default=50, help="training epoch numbers")
 parser.add_argument("--lr", default=0.001, help="learning rate")
@@ -53,7 +53,7 @@ def train(model, train_iterator, optim, criterion, device="cpu"):
         label = item[2].to(device).float()
 
         optim.zero_grad()
-        output, att_weight = model(x, questions) 
+        output, _ = model(x, questions) 
         loss = criterion(output, label)
         loss.backward()
         optim.step()
@@ -96,7 +96,7 @@ def validation(model, val_iterator, criterion, device):
         label = item[2].to(device).float()
 
         with torch.no_grad():
-            output, att_weight = model(x, questions)
+            output, _ = model(x, questions)
         loss = criterion(output, label)
         val_loss.append(loss.item())
 
@@ -136,11 +136,11 @@ if __name__ == "__main__":
     val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    model = SAKTModel(n_skill, embed_dim=100)
+    
+    model = SAKTModel(n_skill, embed_dim=128)
     # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.99, weight_decay=0.005)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCELoss()
 
     model.to(device)
     criterion.to(device)
