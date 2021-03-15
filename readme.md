@@ -1,4 +1,4 @@
-# Deep Knowledge Tracing
+# Knowledge Tracing
 
 |         | ASSISTments2009 | riid   |
 | ------- | --------------- | ------ |
